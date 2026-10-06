@@ -1,0 +1,17 @@
+{
+  "name": "shule-score-sheet",
+  "version": "1.0.0",
+  "description": "Shule Score Sheet — Attendance & Academic Discipline Platform",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.5.2",
+    "@supabase/supabase-js": "^2.48.1",
+    "express": "^4.21.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
