@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shule Score Sheet — Professional Attendance & Academic Discipline Platform</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#065f46">
+    <meta name="background-color" content="#0f172a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="ShuleScore">
     <script>
         // Apply saved theme before paint to avoid flash
         (function () {
@@ -1496,6 +1503,12 @@
                 saveData();
                 return;
             }
+            // Offline-first: save locally + queue for sync when online
+            if (window.shuleSync) {
+                await window.shuleSync.saveLocalRecord(record, apiUrl('/records'));
+                assessmentRecords.push(record);
+                return;
+            }
             await apiFetch('/records', { method: 'POST', body: JSON.stringify(record) });
             await loadData();
         }
@@ -1506,6 +1519,14 @@
                 saveData();
                 return;
             }
+            // Offline-first: queue each item for later sync
+            if (window.shuleSync) {
+                for (const r of items) {
+                    await window.shuleSync.saveLocalRecord(r, apiUrl('/records'));
+                    assessmentRecords.push(r);
+                }
+                return;
+            }
             await apiFetch('/records/bulk-attendance', { method: 'POST', body: JSON.stringify({ items }) });
             await loadData();
         }
@@ -1514,6 +1535,12 @@
             if (!isApiMode()) {
                 disciplineIncidents.push(d);
                 localStorage.setItem('shule_discipline', JSON.stringify(disciplineIncidents));
+                return;
+            }
+            // Offline-first: save locally + queue for sync
+            if (window.shuleSync) {
+                await window.shuleSync.saveLocalRecord(d, apiUrl('/discipline'));
+                disciplineIncidents.push(d);
                 return;
             }
             await apiFetch('/discipline', { method: 'POST', body: JSON.stringify(d) });
@@ -6053,6 +6080,32 @@
                 await loadData();
             }
         };
+    </script>
+    <script src="/offline-db.js"></script>
+    <script>
+        // Register Service Worker for offline-first PWA support
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(function (reg) {
+                        console.log('Shule Score SW registered:', reg.scope);
+                    })
+                    .catch(function (err) {
+                        console.warn('SW registration failed:', err);
+                    });
+            });
+        }
+        // Optional: show online/offline status in console / toast
+        window.addEventListener('offline', function () {
+            if (typeof showToast === 'function') {
+                showToast('You are offline. Changes will sync when connection returns.', 'warning');
+            }
+        });
+        window.addEventListener('online', function () {
+            if (typeof showToast === 'function') {
+                showToast('Back online. Syncing pending records...', 'info');
+            }
+        });
     </script>
 </body>
 </html>
