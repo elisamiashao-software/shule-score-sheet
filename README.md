@@ -1,1 +1,0 @@
-# shule-score-sheet
